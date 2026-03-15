@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer, TileLayer, GeoJSON, useMap, ImageOverlay } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, useMap, ImageOverlay, useMapEvents } from 'react-leaflet';
 import { useFileSystemContext } from '../contexts/FileSystemContext';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -64,6 +64,16 @@ const MapBoundsUpdater = ({ geojsonData, activeDate, selectedDb }: { geojsonData
             }
         }
     }, [geojsonData, activeDate, selectedDb, map]);
+    return null;
+};
+
+// Component to handle map background clicks (to clear overlays)
+const MapClickHandler = ({ clearOverlay }: { clearOverlay: () => void }) => {
+    useMapEvents({
+        click: () => {
+            clearOverlay();
+        },
+    });
     return null;
 };
 
@@ -303,23 +313,27 @@ export default function SatelliteMap({ geojsonData, satelliteData, tiffBuffer, m
         }
 
         layer.on('click', async () => {
-             if (mode === 'NDVI' && selectedCity && activeDate) {
-                 try {
-                     const meshData = await loadNdviMeshPng(selectedCity, selectedDb, activeDate, uuid);
-                     if (meshData) {
-                         const blob = new Blob([meshData.buffer], { type: 'image/png' });
-                         const url = URL.createObjectURL(blob);
-                         setMeshOverlay({ url, bounds: meshData.bounds });
-                     } else {
-                         if (meshOverlay?.url) URL.revokeObjectURL(meshOverlay.url);
-                         setMeshOverlay(null);
-                     }
-                 } catch (e) {
-                     console.error("Failed to load mesh overlay", e);
-                     if (meshOverlay?.url) URL.revokeObjectURL(meshOverlay.url);
-                     setMeshOverlay(null);
-                 }
-             }
+            if (mode === 'NDVI' && selectedCity && activeDate) {
+                try {
+                    const meshData = await loadNdviMeshPng(selectedCity, selectedDb, activeDate, uuid);
+                    if (meshData) {
+                        const blob = new Blob([meshData.buffer], { type: 'image/png' });
+                        const url = URL.createObjectURL(blob);
+                        // Revoke previous URL (if any) before setting new overlay to avoid memory leaks
+                        setMeshOverlay(prev => {
+                            if (prev?.url) URL.revokeObjectURL(prev.url);
+                            return { url, bounds: meshData.bounds };
+                        });
+                    } else {
+                        if (meshOverlay?.url) URL.revokeObjectURL(meshOverlay.url);
+                        setMeshOverlay(null);
+                    }
+                } catch (e) {
+                    console.error("Failed to load mesh overlay", e);
+                    if (meshOverlay?.url) URL.revokeObjectURL(meshOverlay.url);
+                    setMeshOverlay(null);
+                }
+            }
         });
 
         const fieldData = userDb ? userDb[uuid] : null;
@@ -398,6 +412,15 @@ export default function SatelliteMap({ geojsonData, satelliteData, tiffBuffer, m
                 zoom={9} 
                 style={{ height: '100%', width: '100%', zIndex: 0 }}
             >
+                {/* 背景（ポリゴン以外の場所）クリックでメッシュオーバーレイを消す */}
+                <MapClickHandler
+                    clearOverlay={() => {
+                        setMeshOverlay(prev => {
+                            if (prev?.url) URL.revokeObjectURL(prev.url);
+                            return null;
+                        });
+                    }}
+                />
                 {mapType === 'street' ? (
                     <TileLayer
                         key="street"
