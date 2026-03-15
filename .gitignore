@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 dist/
+
+# DataFetcher: WinPython runtime (large, users run update_*.bat to use)
+DataFetcher/WPy64-31241
