@@ -42,5 +42,5 @@ next-env.d.ts
 
 dist/
 
-# DataFetcher: WinPython runtime (large, users run update_*.bat to use)
+# DataFetcher: WinPython runtime (large)
 DataFetcher/WPy64-31241
