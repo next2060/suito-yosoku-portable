@@ -424,8 +424,8 @@ export default function SatelliteMap({ geojsonData, satelliteData, tiffBuffer, m
                 {mapType === 'street' ? (
                     <TileLayer
                         key="street"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>'
+                        url="https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png"
                     />
                 ) : (
                     <TileLayer

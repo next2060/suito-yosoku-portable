@@ -250,7 +250,6 @@ export default function MapComponent({
       let fillOpacity = 0.2;
 
       if (hasData) {
-        fillColor = "#28a745"; // Green for saved (fallback)
         fillOpacity = 0.7;
 
         if (varieties) {
@@ -259,6 +258,7 @@ export default function MapComponent({
           if (variety && variety.color) {
             fillColor = variety.color;
           }
+          // No matching variety: keep default unregistered color
         }
       }
 
@@ -300,8 +300,8 @@ export default function MapComponent({
     >
       {mapType === "street" && (
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">国土地理院</a>'
+          url="https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png"
         />
       )}
       {mapType === "satellite" && (

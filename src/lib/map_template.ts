@@ -23,8 +23,8 @@ export const MAP_TEMPLATE_HTML = `<!DOCTYPE html>
     <div id="controls">
         <div id="map-type-controls" style="margin-bottom: 10px;">
             <h4>地図表示</h4>
-            <button id="street-map-btn" class="active">標準</button>
-            <button id="satellite-map-btn">衛星</button>
+            <button id="street-map-btn">標準</button>
+            <button id="satellite-map-btn" class="active">衛星</button>
         </div>
         <h4>色分け表示</h4>
         <div id="radio-buttons-container"></div>
@@ -44,14 +44,14 @@ export const MAP_TEMPLATE_HTML = `<!DOCTYPE html>
             const map = L.map('map');
 
             // --- Map Layers ---
-            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            const streetLayer = L.tileLayer('https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://maps.gsi.go.jp/development/ichiran.html">\u56fd\u571f\u5730\u7406\u9662</a>'
             });
             const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: '&copy; <a href="https://www.esri.com/">Esri</a>'
             });
             
-            streetLayer.addTo(map); // Default layer
+            satelliteLayer.addTo(map); // Default layer
 
             // Dynamically generate radio buttons
             const radioContainer = document.getElementById('radio-buttons-container');

@@ -134,7 +134,7 @@ export default function FieldSettingsPanel({
             
             <div className="space-y-3 mt-3">
                 <div>
-                    <label className="block text-xs font-bold text-gray-900 mb-1">Variety <span className="text-red-500">*</span></label>
+                    <label className="block text-xs font-bold text-gray-900 mb-1">Variety <span className="text-gray-400 text-[10px]">(Optional)</span></label>
                     <select 
                         className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
                         value={formVarietyId}
@@ -211,6 +211,14 @@ export default function FieldSettingsPanel({
                     </div>
                 </div>
 
+                {selectedFeatures.length > 1 && (
+                    <div className="bg-amber-50 border border-amber-300 rounded p-2 mt-2">
+                        <p className="text-[11px] text-amber-800 font-medium">
+                            ⚠ 複数選択モード: 空欄のフィールドは既存データを維持します。入力した項目のみ一括で上書きされます。
+                        </p>
+                    </div>
+                )}
+
                 <div className="flex flex-col gap-2 mt-4">
                     <button 
                         onClick={() => {
@@ -229,13 +237,8 @@ export default function FieldSettingsPanel({
                     <div className="flex gap-2">
                         <button 
                             onClick={async () => {
-                                // SAVE: Save Input Only to DB (Batch)
+                                // SAVE: Save only non-empty fields to DB
                                 if (selectedFeatures.length > 0 && directoryHandle && selectedDbName) {
-                                    if (!formVarietyId) {
-                                        alert("Variety is required to save.");
-                                        return;
-                                    }
-
                                     // Update DB for ALL selected features
                                     const newData = { ...userDb };
                                     
@@ -252,18 +255,22 @@ export default function FieldSettingsPanel({
                                     selectedFeatures.forEach(feature => {
                                         const uuid = feature.properties.polygon_uuid || feature.properties.id;
                                         const existingRecord = newData[uuid] || {};
-                                        newData[uuid] = {
-                                            ...existingRecord,
+                                        
+                                        // Build updates with only non-empty fields
+                                        const updates: Record<string, any> = {
                                             id: String(uuid),
-                                            name: formFieldName || undefined,
-                                            varietyId: formVarietyId,
-                                            transplantDate: safeTransplant,
-                                            headingDate: safeHeading,
-                                            headingStatus: formHeadingStatus || undefined,
-                                            maturityDate: safeMaturity,
-                                            maturityStatus: formMaturityStatus || undefined,
                                             updatedAt: new Date().toISOString()
                                         };
+                                        
+                                        if (formFieldName)       updates.name = formFieldName;
+                                        if (formVarietyId)       updates.varietyId = formVarietyId;
+                                        if (safeTransplant)      updates.transplantDate = safeTransplant;
+                                        if (safeHeading)         updates.headingDate = safeHeading;
+                                        if (formHeadingStatus)   updates.headingStatus = formHeadingStatus;
+                                        if (safeMaturity)        updates.maturityDate = safeMaturity;
+                                        if (formMaturityStatus)  updates.maturityStatus = formMaturityStatus;
+                                        
+                                        newData[uuid] = { ...existingRecord, ...updates };
                                     });
                                     
                                     try {

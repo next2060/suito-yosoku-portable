@@ -148,7 +148,7 @@ export default function Home() {
           if (userDb[uuid]) {
               const rec = userDb[uuid];
               setFormFieldName(rec.name || '');
-              setFormVarietyId(rec.varietyId || varieties[0]?.id || '');
+              setFormVarietyId(rec.varietyId || '');
               setFormTransplantDate(rec.transplantDate || '');
               setFormHeadingDate(rec.headingDate || '');
               setFormHeadingStatus(rec.headingStatus || '');
@@ -174,7 +174,14 @@ export default function Home() {
           setFormMaturityDate('');
           setFormMaturityStatus('');
       } else {
-          // Multiple selection: Keep current form values (do nothing)
+          // Multiple selection: Clear form to avoid carrying over single-field data
+          setFormFieldName('');
+          setFormVarietyId('');
+          setFormTransplantDate('');
+          setFormHeadingDate('');
+          setFormHeadingStatus('');
+          setFormMaturityDate('');
+          setFormMaturityStatus('');
       }
   };
 
