@@ -68,7 +68,7 @@ export default function Home() {
   } = usePrediction({
       userDb, saveUserDb, selectedDbName, fields, selectedFeatures,
       varieties, loadedWeatherData, setStatus,
-      formVarietyId, formTransplantDate
+      formVarietyId, formTransplantDate, formHeadingDate
   });
 
   const {

@@ -57,13 +57,14 @@ export async function readWeatherCsv(file: File, type: 'act' | 'avg'): Promise<W
           .map((row: any) => {
             let dateStr = row["Date"] || row["date"] || row["年月日"];
             if (dateStr) {
-              // Handle MM-DD or M/D format by prepending 2024 (leap year)
+              // Handle MM-DD or M/D format by prepending the current year
               if (dateStr.match(/^\d{1,2}[/-]\d{1,2}$/)) {
                 // Normalize separator to hyphen and pad with zero if needed
                 const parts = dateStr.split(/[/-]/);
                 const month = parts[0].padStart(2, "0");
                 const day = parts[1].padStart(2, "0");
-                dateStr = `2024-${month}-${day}`;
+                const currentYear = new Date().getFullYear();
+                dateStr = `${currentYear}-${month}-${day}`;
               }
             }
 

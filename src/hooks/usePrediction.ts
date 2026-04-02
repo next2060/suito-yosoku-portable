@@ -15,6 +15,7 @@ interface UsePredictionProps {
     // Form States
     formVarietyId: string;
     formTransplantDate: string;
+    formHeadingDate: string;
 }
 
 // Utility function to sanitize and format date strings (e.g. MMDD -> MM-DD)
@@ -58,17 +59,19 @@ export function usePrediction({
     loadedWeatherData,
     setStatus,
     formVarietyId,
-    formTransplantDate
+    formTransplantDate,
+    formHeadingDate
 }: UsePredictionProps) {
     const [calculationResult, setCalculationResult] = useState<PredictionResult | null>(null);
 
     const normalizeDate = (d: string) => {
         if (!d) return null;
-        if (d.match(/^\d{1,2}-\d{1,2}$/)) {
-            const [m, day] = d.split('-');
+        const s = sanitizeInputDate(d);
+        if (s.match(/^\d{1,2}-\d{1,2}$/)) {
+            const [m, day] = s.split('-');
             
             // Try to extract year from the first element of weather data if available
-            let year = '2024';
+            let year = String(new Date().getFullYear());
             if (loadedWeatherData && loadedWeatherData.length > 0 && loadedWeatherData[0].date) {
                 const wDateObj = new Date(loadedWeatherData[0].date);
                 if (!isNaN(wDateObj.getFullYear())) {
@@ -77,7 +80,7 @@ export function usePrediction({
             }
             return `${year}-${m.padStart(2, '0')}-${day.padStart(2, '0')}`;
         }
-        return d; // Assume already YYYY-MM-DD
+        return s; // Assume already YYYY-MM-DD
     };
 
     const formatUIDate = (dateStr: string | null | undefined) => {
@@ -114,11 +117,14 @@ export function usePrediction({
 
         if (!varietyId || !transplantDate) {
             const formRec = selectedFeatures.length === 1 && (feature.properties.polygon_uuid === selectedFeatures[0].properties.polygon_uuid) 
-              ? { varietyId: formVarietyId, transplantDate: formTransplantDate } : null;
+              ? { varietyId: formVarietyId, transplantDate: formTransplantDate, headingDate: formHeadingDate } : null;
 
             if (formRec && formRec.varietyId && formRec.transplantDate) {
                varietyId = formRec.varietyId;
                transplantDate = formRec.transplantDate;
+               if (!headingDate && formRec.headingDate) {
+                   headingDate = formRec.headingDate;
+               }
             } else {
                return { error: 'Missing variety or transplant date' } as any;
             }

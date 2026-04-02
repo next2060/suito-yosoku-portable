@@ -222,6 +222,12 @@ export default function FieldSettingsPanel({
                 <div className="flex flex-col gap-2 mt-4">
                     <button 
                         onClick={() => {
+                            // Sanitize form inputs first
+                            if (selectedFeatures.length === 1) {
+                                setFormTransplantDate(sanitizeInputDate(formTransplantDate));
+                                setFormHeadingDate(sanitizeInputDate(formHeadingDate));
+                                setFormMaturityDate(sanitizeInputDate(formMaturityDate));
+                            }
                             // RUN: Only works for single selection
                             const result = calculatePrediction();
                             if (result) {
