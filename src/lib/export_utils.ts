@@ -13,6 +13,8 @@ type UserDbRecord = {
   transplantDate?: string;
   headingDate?: string;
   maturityDate?: string;
+  measurementDate?: string;
+  panicleLength?: number;
   headingStatus?: string;
   maturityStatus?: string;
   updatedAt?: string;
@@ -34,6 +36,8 @@ export interface FormattedExportRow {
   ポリゴンUUID: string;
   圃場名: string;
   品種: string;
+  測定日?: string;
+  幼穂長?: number | "";
   備考: string;
   緯度?: number | null;
   経度?: number | null;
@@ -60,6 +64,8 @@ const formatSingleRow = (
     ポリゴンUUID: id,
     圃場名: String(sourceData.name || ""),
     品種: String(sourceData.varietyId || ""),
+    測定日: String(sourceData.measurementDate || ""),
+    幼穂長: sourceData.panicleLength ?? "",
     備考: String(sourceData.remarks || ""),
     市町村コード: municipalityCode || "",
     緯度: center[1],

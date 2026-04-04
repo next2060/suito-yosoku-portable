@@ -1,4 +1,4 @@
-
+import { useState } from 'react';
 import { GeoFeature, PredictionResult } from '@/lib/logic/types';
 import { sanitizeInputDate } from '@/hooks/usePrediction';
 
@@ -29,6 +29,12 @@ interface FieldSettingsPanelProps {
     formMaturityStatus: string;
     setFormMaturityStatus: (s: string) => void;
     
+    formMeasurementDate: string;
+    setFormMeasurementDate: (s: string) => void;
+    
+    formPanicleLength: string;
+    setFormPanicleLength: (s: string) => void;
+    
     selectedDbName: string | null;
     directoryHandle: FileSystemDirectoryHandle | null;
     
@@ -55,6 +61,8 @@ export default function FieldSettingsPanel({
     formHeadingStatus, setFormHeadingStatus,
     formMaturityDate, setFormMaturityDate,
     formMaturityStatus, setFormMaturityStatus,
+    formMeasurementDate, setFormMeasurementDate,
+    formPanicleLength, setFormPanicleLength,
     
     selectedDbName,
     directoryHandle,
@@ -87,6 +95,8 @@ export default function FieldSettingsPanel({
         );
     }
 
+    const [inputMode, setInputMode] = useState<'transplant' | 'panicle'>('transplant');
+
     return (
         <div className="bg-white p-4 rounded shadow border border-gray-200">
             <div className="flex justify-between items-center mb-2">
@@ -118,23 +128,20 @@ export default function FieldSettingsPanel({
                     {selectedFeatures[0].properties.polygon_uuid}
                 </p>
             )}
-            <div className="bg-white p-3 rounded shadow-sm border border-gray-200">
-                <h4 className="font-bold text-sm text-green-800 mb-2 border-b pb-1">Field Data</h4>
-                <div>
-                    <label className="block text-xs font-bold text-gray-900 mb-1">Field Name <span className="text-gray-400 text-[10px]">(Optional)</span></label>
-                    <input 
-                        type="text" 
-                        placeholder="Field Name"
-                        className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
-                        value={formFieldName}
-                        onChange={(e) => setFormFieldName(e.target.value)}
-                    />
-                </div>
+            <div className="mt-2">
+                <label className="block text-xs font-bold text-gray-900 mb-1">Field Name</label>
+                <input 
+                    type="text" 
+                    placeholder="Field Name"
+                    className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                    value={formFieldName}
+                    onChange={(e) => setFormFieldName(e.target.value)}
+                />
             </div>
             
             <div className="space-y-3 mt-3">
                 <div>
-                    <label className="block text-xs font-bold text-gray-900 mb-1">Variety <span className="text-gray-400 text-[10px]">(Optional)</span></label>
+                    <label className="block text-xs font-bold text-gray-900 mb-1">Variety</label>
                     <select 
                         className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
                         value={formVarietyId}
@@ -147,68 +154,129 @@ export default function FieldSettingsPanel({
                     </select>
                 </div>
 
-                <div>
-                    <label className="block text-xs font-bold text-gray-900 mb-1">
-                        Transplant Date (MM-DD) <span className="text-gray-400 text-[10px]">(Optional)</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        placeholder="MM-DD (Optional)"
-                        className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
-                        value={formTransplantDate}
-                        onChange={(e) => setFormTransplantDate(e.target.value)}
-                    />
-                </div>
-                
-                <div>
-                    <label className="block text-xs font-bold text-gray-900 mb-1">
-                        Heading Date (MM-DD) <span className="text-gray-400 text-[10px]">(Optional)</span>
-                    </label>
-                    <div className="flex gap-2">
-                        <input 
-                            type="text" 
-                            placeholder="MM-DD (Optional)"
-                            className="w-2/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
-                            value={formHeadingDate}
-                            onChange={(e) => setFormHeadingDate(e.target.value)}
-                        />
-                        <select
-                            className="w-1/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
-                            value={formHeadingStatus}
-                            onChange={(e) => setFormHeadingStatus(e.target.value)}
-                        >
-                            <option value="">(None)</option>
-                            <option value="実績">実績</option>
-                            <option value="予測">予測</option>
-                        </select>
+                <div className="bg-gray-50 p-3 rounded border border-gray-300 space-y-3">
+                    <div>
+                        <label className="block text-xs font-bold text-gray-900 mb-2">Prediction Mode</label>
+                        <div className="flex gap-4 p-2 bg-white border rounded-sm mb-2 text-sm">
+                            <label className="flex items-center gap-1 cursor-pointer font-bold text-gray-800">
+                                <input 
+                                    type="radio" 
+                                    name="inputMode" 
+                                    value="transplant" 
+                                    checked={inputMode === 'transplant'}
+                                    onChange={() => setInputMode('transplant')}
+                                /> 移植日
+                            </label>
+                            <label className="flex items-center gap-1 cursor-pointer font-bold text-gray-800">
+                                <input 
+                                    type="radio" 
+                                    name="inputMode" 
+                                    value="panicle" 
+                                    checked={inputMode === 'panicle'}
+                                    onChange={() => setInputMode('panicle')}
+                                /> 幼穂長
+                            </label>
+                        </div>
                     </div>
-                    <p className="text-[10px] text-gray-500 mt-1 mb-2">
-                        If entered, prediction starts from Heading Date.
-                    </p>
-                </div>
 
-                <div>
-                    <label className="block text-xs font-bold text-gray-900 mb-1">
-                        Maturity Date (MM-DD) <span className="text-gray-400 text-[10px]">(Optional)</span>
-                    </label>
-                    <div className="flex gap-2">
-                        <input 
-                            type="text" 
-                            placeholder="MM-DD (Optional)"
-                            className="w-2/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
-                            value={formMaturityDate}
-                            onChange={(e) => setFormMaturityDate(e.target.value)}
-                        />
-                        <select
-                            className="w-1/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
-                            value={formMaturityStatus}
-                            onChange={(e) => setFormMaturityStatus(e.target.value)}
-                        >
-                            <option value="">(None)</option>
-                            <option value="実績">実績</option>
-                            <option value="予測">予測</option>
-                        </select>
-                    </div>
+                    {inputMode === 'transplant' ? (
+                        <>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-900 mb-1">
+                                    Transplant Date (MM-DD)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    placeholder="MM-DD"
+                                    className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                    value={formTransplantDate}
+                                    onChange={(e) => setFormTransplantDate(e.target.value)}
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="block text-xs font-bold text-gray-900 mb-1">
+                                    Heading Date (MM-DD)
+                                </label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="MM-DD"
+                                        className="w-2/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                        value={formHeadingDate}
+                                        onChange={(e) => setFormHeadingDate(e.target.value)}
+                                    />
+                                    <select
+                                        className="w-1/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                        value={formHeadingStatus}
+                                        onChange={(e) => setFormHeadingStatus(e.target.value)}
+                                    >
+                                        <option value="">(None)</option>
+                                        <option value="実績">実績</option>
+                                        <option value="予測">予測</option>
+                                    </select>
+                                </div>
+                                <p className="text-[10px] text-gray-500 mt-1 mb-2">
+                                    If entered, prediction starts from Heading Date.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-gray-900 mb-1">
+                                    Maturity Date (MM-DD)
+                                </label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        placeholder="MM-DD"
+                                        className="w-2/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                        value={formMaturityDate}
+                                        onChange={(e) => setFormMaturityDate(e.target.value)}
+                                    />
+                                    <select
+                                        className="w-1/3 p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                        value={formMaturityStatus}
+                                        onChange={(e) => setFormMaturityStatus(e.target.value)}
+                                    >
+                                        <option value="">(None)</option>
+                                        <option value="実績">実績</option>
+                                        <option value="予測">予測</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-900 mb-1">
+                                    Measurement Date (MM-DD)
+                                </label>
+                                <input 
+                                    type="text" 
+                                    placeholder="MM-DD"
+                                    className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                    value={formMeasurementDate}
+                                    onChange={(e) => setFormMeasurementDate(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-900 mb-1">
+                                    Panicle Length (mm)
+                                </label>
+                                <input 
+                                    type="number"
+                                    step="0.1" 
+                                    placeholder="e.g. 10.5"
+                                    className="w-full p-2 border border-gray-400 rounded text-sm text-black font-medium"
+                                    value={formPanicleLength}
+                                    onChange={(e) => setFormPanicleLength(e.target.value)}
+                                />
+                                <p className="text-[10px] text-gray-500 mt-1 mb-2 font-medium">
+                                    If panicle data exists, it will take precedence over transplant info.
+                                </p>
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {selectedFeatures.length > 1 && (
@@ -227,6 +295,7 @@ export default function FieldSettingsPanel({
                                 setFormTransplantDate(sanitizeInputDate(formTransplantDate));
                                 setFormHeadingDate(sanitizeInputDate(formHeadingDate));
                                 setFormMaturityDate(sanitizeInputDate(formMaturityDate));
+                                setFormMeasurementDate(sanitizeInputDate(formMeasurementDate));
                             }
                             // RUN: Only works for single selection
                             const result = calculatePrediction();
@@ -251,11 +320,13 @@ export default function FieldSettingsPanel({
                                     const safeTransplant = sanitizeInputDate(formTransplantDate);
                                     const safeHeading = sanitizeInputDate(formHeadingDate);
                                     const safeMaturity = sanitizeInputDate(formMaturityDate);
+                                    const safeMeasurement = sanitizeInputDate(formMeasurementDate);
                                     
                                     if (selectedFeatures.length === 1) {
                                         setFormTransplantDate(safeTransplant);
                                         setFormHeadingDate(safeHeading);
                                         setFormMaturityDate(safeMaturity);
+                                        setFormMeasurementDate(safeMeasurement);
                                     }
                                     
                                     selectedFeatures.forEach(feature => {
@@ -275,6 +346,8 @@ export default function FieldSettingsPanel({
                                         if (formHeadingStatus)   updates.headingStatus = formHeadingStatus;
                                         if (safeMaturity)        updates.maturityDate = safeMaturity;
                                         if (formMaturityStatus)  updates.maturityStatus = formMaturityStatus;
+                                        if (safeMeasurement)     updates.measurementDate = safeMeasurement;
+                                        if (formPanicleLength)   updates.panicleLength = parseFloat(formPanicleLength);
                                         
                                         newData[uuid] = { ...existingRecord, ...updates };
                                     });
@@ -324,6 +397,8 @@ export default function FieldSettingsPanel({
                                                 setFormTransplantDate('');
                                                 setFormHeadingDate('');
                                                 setFormMaturityDate('');
+                                                setFormMeasurementDate('');
+                                                setFormPanicleLength('');
                                             }
                                             setSelectedFeatures([]); // Cancel selection
                                         } catch (e: any) {

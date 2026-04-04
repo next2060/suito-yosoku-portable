@@ -143,6 +143,8 @@ export default function CsvImport({
                 let transplantDate = row['transplantDate'] ?? row['transplant_date'] ?? row['移植期'] ?? row['移植日'] ?? '';
                 let headingDate = row['headingDate'] ?? row['heading_date'] ?? row['出穂期'] ?? '';
                 let maturityDate = row['maturityDate'] ?? row['maturity_date'] ?? row['成熟期'] ?? '';
+                let measurementDate = row['measurementDate'] ?? row['measurement_date'] ?? row['測定日'] ?? '';
+                let panicleLength = row['panicleLength'] ?? row['panicle_length'] ?? row['幼穂長'] ?? '';
                 const fieldName = row['name'] ?? row['field_name'] ?? row['圃場名'] ?? '';
                 
                 // Get explicit status
@@ -153,6 +155,9 @@ export default function CsvImport({
                 transplantDate = sanitizeInputDate(transplantDate);
                 headingDate = sanitizeInputDate(headingDate);
                 maturityDate = sanitizeInputDate(maturityDate);
+                measurementDate = sanitizeInputDate(measurementDate);
+                let parsedPanicle = panicleLength ? parseFloat(panicleLength) : undefined;
+                if (parsedPanicle && isNaN(parsedPanicle)) parsedPanicle = undefined;
 
                 // Sanitize Status
                 const isValidStatus = (s: any) => s === '予測' || s === '実績' ? s : undefined;
@@ -166,6 +171,8 @@ export default function CsvImport({
                     transplantDate: transplantDate,
                     headingDate: headingDate,
                     maturityDate: maturityDate,
+                    measurementDate: measurementDate,
+                    panicleLength: parsedPanicle,
                     headingStatus: headingStatus,
                     maturityStatus: maturityStatus,
                     updatedAt: new Date().toISOString()

@@ -57,6 +57,8 @@ export default function Home() {
   const [formHeadingStatus, setFormHeadingStatus] = useState<string>('実績');
   const [formMaturityDate, setFormMaturityDate] = useState<string>('');
   const [formMaturityStatus, setFormMaturityStatus] = useState<string>('予測');
+  const [formMeasurementDate, setFormMeasurementDate] = useState<string>('');
+  const [formPanicleLength, setFormPanicleLength] = useState<string>('');
   const [newDbName, setNewDbName] = useState<string>('');
 
   const {
@@ -68,7 +70,8 @@ export default function Home() {
   } = usePrediction({
       userDb, saveUserDb, selectedDbName, fields, selectedFeatures,
       varieties, loadedWeatherData, setStatus,
-      formVarietyId, formTransplantDate, formHeadingDate
+      formVarietyId, formTransplantDate, formHeadingDate,
+      formMeasurementDate, formPanicleLength
   });
 
   const {
@@ -154,6 +157,8 @@ export default function Home() {
               setFormHeadingStatus(rec.headingStatus || '');
               setFormMaturityDate(rec.maturityDate || '');
               setFormMaturityStatus(rec.maturityStatus || '');
+              setFormMeasurementDate(rec.measurementDate || '');
+              setFormPanicleLength(rec.panicleLength !== undefined ? String(rec.panicleLength) : '');
           } else {
               // Defaults (Empty)
               setFormFieldName('');
@@ -163,6 +168,8 @@ export default function Home() {
               setFormHeadingStatus('');
               setFormMaturityDate('');
               setFormMaturityStatus('');
+              setFormMeasurementDate('');
+              setFormPanicleLength('');
           }
       } else if (newSelectedFeatures.length === 0) {
           // No selection: Clear form
@@ -173,6 +180,8 @@ export default function Home() {
           setFormHeadingStatus('');
           setFormMaturityDate('');
           setFormMaturityStatus('');
+          setFormMeasurementDate('');
+          setFormPanicleLength('');
       } else {
           // Multiple selection: Clear form to avoid carrying over single-field data
           setFormFieldName('');
@@ -182,6 +191,8 @@ export default function Home() {
           setFormHeadingStatus('');
           setFormMaturityDate('');
           setFormMaturityStatus('');
+          setFormMeasurementDate('');
+          setFormPanicleLength('');
       }
   };
 
@@ -363,6 +374,10 @@ export default function Home() {
                             setFormMaturityDate={setFormMaturityDate}
                             formMaturityStatus={formMaturityStatus}
                             setFormMaturityStatus={setFormMaturityStatus}
+                            formMeasurementDate={formMeasurementDate}
+                            setFormMeasurementDate={setFormMeasurementDate}
+                            formPanicleLength={formPanicleLength}
+                            setFormPanicleLength={setFormPanicleLength}
                             selectedDbName={selectedDbName}
                             directoryHandle={directoryHandle}
                             calculatePrediction={calculatePrediction}

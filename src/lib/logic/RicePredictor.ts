@@ -35,7 +35,8 @@ export function runPrediction(
     variety: VarietyParams,
     weatherData: WeatherData[], // Assumed to be sorted by date and filled (Act + Avg)
     startDateStr: string,
-    startStage: 'transplant' | 'heading' = 'transplant'
+    startStage: 'transplant' | 'heading' | 'panicle' = 'transplant',
+    panicleLength?: number
 ): PredictionResult {
 
     try {
@@ -115,6 +116,73 @@ export function runPrediction(
                 if (tsum > tmax) {
                     maturityDate = currentDate;
                     break;
+                }
+            }
+        }
+        // Case 3: From Panicle
+        else if (startStage === 'panicle') {
+            const pLength = panicleLength || 0;
+            // 幼穂長の常用対数値 (L)
+            const L = pLength > 0 ? Math.log10(pLength) : 0;
+            
+            // 基準品種に準じて早晩性を判定
+            const targetId = variety.baseVarietyId || variety.id;
+            const WASE_VARIETIES = ['一番星', 'あきたこまち', 'ふくまるSL'];
+            const mGroup = WASE_VARIETIES.includes(targetId) ? 'wase' : 'nakate';
+            
+            let E = 0;
+            let baseTemp = 0;
+            
+            if (mGroup === 'wase') {
+                E = -112.28 * L + 366.19;
+                baseTemp = 9.0;
+            } else {
+                E = -109.83 * L + 380.77;
+                baseTemp = 10.0;
+            }
+            
+            let effectiveTempSum = 0.0;
+            let headingFound = false;
+            
+            // 調査日(startDate)から有効温度を積算
+            for (let i = startIndex; i < weatherData.length; i++) {
+                const w = weatherData[i];
+                const T = w.temp;
+                const effectiveTemp = T - baseTemp;
+                
+                if (effectiveTemp > 0) {
+                    effectiveTempSum += effectiveTemp;
+                }
+                
+                // 積算値 E を超えた日が「出穂前日」、翌日を「出穂期」とする
+                if (effectiveTempSum > E) {
+                    headingDate = addDays(parseISO(w.date), 1);
+                    headingFound = true;
+                    break; // 出穂期が決まったら成熟期の計算へ
+                }
+            }
+            
+            if (!headingFound) {
+                console.warn(`[Predictor] Loop finished without reaching Heading (panicle method). Final E sum: ${effectiveTempSum.toFixed(1)} / ${E.toFixed(1)}`);
+            } else {
+                let tsum = 0.0;
+                let startAccum = false;
+                
+                for (let i = startIndex; i < weatherData.length; i++) {
+                    const currentDate = parseISO(weatherData[i].date);
+                    
+                    // 出穂日の翌日から積算開始
+                    if (!startAccum && isAfter(currentDate, headingDate!)) {
+                        startAccum = true;
+                    }
+                    
+                    if (startAccum) {
+                        tsum += weatherData[i].temp;
+                        if (tsum > tmax) {
+                            maturityDate = currentDate;
+                            break;
+                        }
+                    }
                 }
             }
         }

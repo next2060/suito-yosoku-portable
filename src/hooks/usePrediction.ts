@@ -16,6 +16,8 @@ interface UsePredictionProps {
     formVarietyId: string;
     formTransplantDate: string;
     formHeadingDate: string;
+    formMeasurementDate?: string;
+    formPanicleLength?: string;
 }
 
 // Utility function to sanitize and format date strings (e.g. MMDD -> MM-DD)
@@ -60,7 +62,9 @@ export function usePrediction({
     setStatus,
     formVarietyId,
     formTransplantDate,
-    formHeadingDate
+    formHeadingDate,
+    formMeasurementDate,
+    formPanicleLength
 }: UsePredictionProps) {
     const [calculationResult, setCalculationResult] = useState<PredictionResult | null>(null);
 
@@ -108,26 +112,33 @@ export function usePrediction({
         let varietyId = '';
         let transplantDate = '';
         let headingDate = '';
+        let measurementDate = '';
+        let panicleLength: number | undefined = undefined;
 
-        if (userDb[uuid]) {
-            varietyId = userDb[uuid].varietyId;
-            transplantDate = userDb[uuid].transplantDate;
-            headingDate = userDb[uuid].headingDate;
+        // Priority 1: If THIS feature is the one currently in the edit form, use form values
+        const isSelected = selectedFeatures.length === 1 && (feature.properties.polygon_uuid === selectedFeatures[0].properties.polygon_uuid);
+        if (isSelected) {
+            varietyId = formVarietyId;
+            transplantDate = formTransplantDate;
+            headingDate = formHeadingDate;
+            measurementDate = formMeasurementDate || '';
+            if (formPanicleLength) {
+                const p = parseFloat(formPanicleLength);
+                panicleLength = isNaN(p) ? undefined : p;
+            }
         }
 
-        if (!varietyId || !transplantDate) {
-            const formRec = selectedFeatures.length === 1 && (feature.properties.polygon_uuid === selectedFeatures[0].properties.polygon_uuid) 
-              ? { varietyId: formVarietyId, transplantDate: formTransplantDate, headingDate: formHeadingDate } : null;
+        // Priority 2: Use Database record to fill in what's missing, or for unselected features
+        if (userDb[uuid]) {
+            if (!varietyId) varietyId = userDb[uuid].varietyId;
+            if (!transplantDate) transplantDate = userDb[uuid].transplantDate;
+            if (!headingDate) headingDate = userDb[uuid].headingDate;
+            if (!measurementDate) measurementDate = userDb[uuid].measurementDate || '';
+            if (panicleLength === undefined) panicleLength = userDb[uuid].panicleLength;
+        }
 
-            if (formRec && formRec.varietyId && formRec.transplantDate) {
-               varietyId = formRec.varietyId;
-               transplantDate = formRec.transplantDate;
-               if (!headingDate && formRec.headingDate) {
-                   headingDate = formRec.headingDate;
-               }
-            } else {
-               return { error: 'Missing variety or transplant date' } as any;
-            }
+        if (!varietyId || (!transplantDate && !measurementDate)) {
+            return { error: 'Missing variety or start date' } as any;
         }
 
         const variety = varieties.find(v => v.id === varietyId);
@@ -135,10 +146,22 @@ export function usePrediction({
 
         const normTransplant = normalizeDate(transplantDate);
         const normHeading = normalizeDate(headingDate);
+        const normMeasurement = normalizeDate(measurementDate);
 
-        if (!normTransplant) return { error: 'Invalid transplant date' } as any;
+        if (!normTransplant && !normMeasurement) return { error: 'Invalid start date' } as any;
 
-        if (normHeading) {
+        // Preference: Measurement (Panicle) -> Heading -> Transplant
+        if (normMeasurement && panicleLength !== undefined) {
+             return runPrediction(
+                 36.365,
+                 140.471,
+                 variety,
+                 loadedWeatherData,
+                 normMeasurement,
+                 'panicle',
+                 panicleLength
+             );
+        } else if (normHeading) {
             return runPrediction(
                 36.365,
                 140.471,
@@ -153,7 +176,7 @@ export function usePrediction({
                 140.471,
                 variety,
                 loadedWeatherData,
-                normTransplant,
+                normTransplant!,
                 'transplant'
             );
         }
