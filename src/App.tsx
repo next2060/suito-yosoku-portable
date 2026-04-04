@@ -13,6 +13,7 @@ import VarietySettings from '@/components/VarietySettings';
 import CsvImport from '@/components/CsvImport';
 import WeatherViewer from '@/components/WeatherViewer';
 import SatelliteViewer from '@/components/SatelliteViewer';
+import AboutModal from '@/components/AboutModal';
 
 
 export default function Home() {
@@ -40,6 +41,7 @@ export default function Home() {
   // View State: 'map', 'varieties', 'csv', 'weather', 'satellite'
   const [currentView, setCurrentView] = useState<'map' | 'varieties' | 'csv' | 'weather' | 'satellite'>('map');
   const [activeSidebarTab, setActiveSidebarTab] = useState<'setup' | 'field' | 'export'>('setup');
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   
   // Data States
   const [selectedCity, setSelectedCity] = useState<string>('');
@@ -78,8 +80,8 @@ export default function Home() {
       isExporting,
       handleCsvExport, handleGeoJsonExport, handleHtmlExport
   } = useExport({
-      userDb, saveUserDb, selectedDbName, fields, selectedFeatures,
-      varieties, loadedWeatherData, setStatus, runPredictionForFeature
+      userDb, selectedDbName, fields, selectedFeatures,
+      varieties, setStatus
   });
 
   // Sync status
@@ -213,6 +215,17 @@ export default function Home() {
         <h1 className="text-xl font-bold">水稲生育予測システム (Local)</h1>
         <div className="flex items-center gap-4">
             <button 
+                onClick={() => setIsAboutOpen(true)}
+                className="text-white hover:text-green-200 transition px-2 py-1 flex items-center gap-1 font-bold text-sm"
+                title="システム概要・クレジット"
+            >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="hidden sm:inline">About</span>
+            </button>
+            <div className="w-px h-6 bg-green-500 mx-1"></div>
+            <button 
                 onClick={() => setCurrentView('map')}
                 disabled={!directoryHandle}
                 className={`text-sm px-3 py-1 rounded font-bold transition-all
@@ -289,6 +302,7 @@ export default function Home() {
                     globalSelectedCity={selectedCity}
                     globalLoadCity={loadCity}
                     globalFields={fields}
+                    runPredictionForFeature={runPredictionForFeature}
                 />
              </div>
         ) : currentView === 'weather' ? (
@@ -383,6 +397,8 @@ export default function Home() {
                             selectedDbName={selectedDbName}
                             directoryHandle={directoryHandle}
                             calculatePrediction={calculatePrediction}
+                            runPredictionForFeature={runPredictionForFeature}
+                            hasWeatherLoaded={loadedWeatherData.length > 0}
                             userDb={userDb}
                             saveUserDb={saveUserDb}
                             formatUIDate={formatUIDate}
@@ -415,6 +431,7 @@ export default function Home() {
             </>
         )}
       </main>
+      <AboutModal isOpen={isAboutOpen} onClose={() => setIsAboutOpen(false)} />
     </div>
   );
 }

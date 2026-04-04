@@ -23,14 +23,6 @@ type UserDbRecord = {
   [key: string]: any;
 };
 
-// Use type from logic/types or define matching structure
-type PredictionResult = {
-  heading_date?: string | null;
-  maturity_date?: string | null;
-  met26?: number | null;
-  error?: string;
-};
-
 // Common output row type definition
 export interface FormattedExportRow {
   ポリゴンUUID: string;
@@ -46,12 +38,12 @@ export interface FormattedExportRow {
 
 /**
  * Converts a single feature row data into a formatted export format.
+ * All prediction values are read directly from DB records (sourceData).
  */
 const formatSingleRow = (
   system: "rice" | "wheat",
   id: string,
   sourceData: UserDbRecord,
-  prediction: PredictionResult, // Simplified PredictionResult
   geometry?: Feature["geometry"],
   municipalityCode?: string,
 ): FormattedExportRow => {
@@ -60,72 +52,47 @@ const formatSingleRow = (
       ? centerOfMass(geometry).geometry.coordinates
       : [null, null];
 
-  const row: FormattedExportRow = {
-    ポリゴンUUID: id,
-    圃場名: String(sourceData.name || ""),
-    品種: String(sourceData.varietyId || ""),
-    測定日: String(sourceData.measurementDate || ""),
-    幼穂長: sourceData.panicleLength ?? "",
-    備考: String(sourceData.remarks || ""),
-    市町村コード: municipalityCode || "",
-    緯度: center[1],
-    経度: center[0],
-  };
-
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return "";
-    // Assuming dateStr is in YYYY-MM-DD or MM-DD format, or valid Date string
-    // Just extract MM-DD
     const match = dateStr.match(/(?:^\d{4}-)?(\d{2}-\d{2})(?:T.*)?$/);
     if (match) return match[1];
-
-    // Fallback
     return String(dateStr);
   };
 
   const stages = getStages(system);
+  const row: any = {};
 
-  for (const stage of stages) {
-    let actualValue: string | undefined;
-    let predictedValue: string | undefined | null;
+  // Build the row in the specific requested order (Rice context)
+  row['ポリゴンUUID'] = id;
+  row['圃場名'] = String(sourceData.name || "");
+  row['品種'] = String(sourceData.varietyId || "");
 
-    // Portable version mapping
-    if (stage.key === "transplantDate") {
-      actualValue = sourceData.transplantDate;
-    } else if (stage.key === "headingDate") {
-      // Source data heading date is actual if input by user
-      if (sourceData.headingDate) {
-        actualValue = sourceData.headingDate;
-      } else {
-        predictedValue = prediction.heading_date;
-      }
-    } else if (stage.key === "maturityDate") {
-      if (sourceData.maturityDate) {
-        actualValue = sourceData.maturityDate;
-      } else {
-        predictedValue = prediction.maturity_date;
-      }
-    }
+  // Rice: 1st stage is "移植期" / Wheat: 1st stage is "播種期"
+  const firstStage = stages[0];
+  if (firstStage) {
+    row[firstStage.label] = formatDate(sourceData[firstStage.key]);
+  }
 
+  // Pre-heading measurements
+  row['測定日'] = formatDate(sourceData.measurementDate);
+  row['幼穂長'] = sourceData.panicleLength ?? "";
+
+  // All other stages (Heading/Maturity)
+  for (let i = 1; i < stages.length; i++) {
+    const stage = stages[i];
+    const dateValue = sourceData[stage.key] || "";
     const baseKey = stage.key.replace('Date', '');
     const savedStatus = sourceData[`${baseKey}Status`];
 
-    if (actualValue) {
-      row[stage.label] = formatDate(actualValue);
-      if (stage.key !== "transplantDate" && stage.key !== "sowingDate") {
-        row[`${stage.label}_状態`] = savedStatus ?? "";
-      }
-    } else {
-      const finalPredicted = predictedValue || "";
-      row[stage.label] = formatDate(finalPredicted);
-      if (stage.key !== "transplantDate" && stage.key !== "sowingDate") {
-        row[`${stage.label}_状態`] = finalPredicted ? (savedStatus ?? "予測") : "";
-      }
+    row[stage.label] = formatDate(dateValue);
+    if (stage.key !== "transplantDate" && stage.key !== "sowingDate") {
+      row[`${stage.label}_状態`] = dateValue ? (savedStatus ?? "") : "";
     }
   }
 
+  // Rice specific MET26
   if (system === "rice") {
-    const met26Value = prediction.met26;
+    const met26Value = sourceData.met26;
     if (met26Value !== null && met26Value !== undefined) {
       row["MET26"] = parseFloat(String(met26Value)).toFixed(1);
     } else {
@@ -133,37 +100,40 @@ const formatSingleRow = (
     }
   }
 
-  const errorValue = prediction.error;
-  row["エラー"] = String(errorValue || "");
+  // Geometry and metadata
+  row['緯度'] = center[1];
+  row['経度'] = center[0];
+  row['市町村コード'] = municipalityCode || "";
+  row['備考'] = String(sourceData.remarks || "");
+  row['エラー'] = "";
 
   return row;
 };
 
 /**
  * Formats data for the main page export.
+ * Reads all data directly from DB — no prediction calculation is performed.
  */
 export const formatMainExportData = async (
   system: "rice" | "wheat",
   selectedFeatures: GeoFeature[],
   userDb: Record<string, UserDbRecord>,
-  predictionResults: Map<string, PredictionResult>,
   municipalityCode?: string,
 ): Promise<FormattedExportRow[]> => {
   const data = await Promise.all(
     selectedFeatures.map(async (feature) => {
       const id = feature.properties.polygon_uuid || feature.properties.id;
       const savedData = userDb[id];
-      if (!savedData) return null; // Only export saved data? Strategy: "target existing saved fields"
+      if (!savedData) return null;
 
-      const prediction = predictionResults.get(id) || {};
+      const muniCode = feature.properties.local_government_cd || municipalityCode;
 
       return formatSingleRow(
         system,
         id,
         savedData,
-        prediction,
         feature.geometry,
-        municipalityCode,
+        muniCode,
       );
     }),
   );

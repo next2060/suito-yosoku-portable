@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GeoFeature, PredictionResult, WeatherData } from '@/lib/logic/types';
+import { GeoFeature } from '@/lib/logic/types';
 import {
     formatMainExportData,
     createGeoJsonFromFormattedData,
@@ -9,26 +9,20 @@ import { MAP_TEMPLATE_HTML } from '@/lib/map_template';
 
 interface UseExportProps {
     userDb: Record<string, any>;
-    saveUserDb: (data: Record<string, any>) => Promise<void>;
     selectedDbName: string | null;
     fields: any; // geojson
     selectedFeatures: GeoFeature[];
     varieties: any[];
-    loadedWeatherData: WeatherData[];
     setStatus: (s: string) => void;
-    runPredictionForFeature: (feature: GeoFeature) => PredictionResult | null;
 }
 
 export function useExport({
     userDb,
-    saveUserDb,
     selectedDbName,
     fields,
     selectedFeatures,
     varieties,
-    loadedWeatherData,
     setStatus,
-    runPredictionForFeature
 }: UseExportProps) {
     const [isExporting, setIsExporting] = useState(false);
 
@@ -45,75 +39,18 @@ export function useExport({
     };
 
     const prepareExportData = async (targetFeatures: GeoFeature[]) => {
-        if (!loadedWeatherData.length) {
-            alert("Please select weather data first.");
-            return null;
-        }
-  
         setIsExporting(true);
-        setStatus('Running predictions for export...');
+        setStatus('DBから出力データを準備中...');
         
-        // Run predictions
-        const results = new Map<string, any>(); // PredictionResult
-        
-        for (const feature of targetFeatures) {
-            const uuid = feature.properties.polygon_uuid || feature.properties.id;
-            const res = runPredictionForFeature(feature);
-            if (res) {
-                results.set(uuid, res);
-            }
-        }
-  
-        // Automatically save predicted dates to the database
-        let exportDb = userDb;
-        if (selectedDbName) {
-            const mergedData = { ...userDb };
-            let hasChanges = false;
-            
-            results.forEach((res, uuid) => {
-                if (res && !res.error && mergedData[uuid]) {
-                    const record = mergedData[uuid];
-                    let updated = false;
-  
-                    if (!record.headingDate && res.heading_date) {
-                        record.headingDate = res.heading_date;
-                        record.headingStatus = '予測';
-                        updated = true;
-                    }
-  
-                    if (!record.maturityDate && res.maturity_date) {
-                        record.maturityDate = res.maturity_date;
-                        record.maturityStatus = '予測';
-                        updated = true;
-                    }
-  
-                    if (updated) {
-                        record.updatedAt = new Date().toISOString();
-                        hasChanges = true;
-                    }
-                }
-            });
-  
-            if (hasChanges) {
-                try {
-                    await saveUserDb(mergedData);
-                } catch (e: any) {
-                    console.error("Failed to auto-save predictions to DB:", e);
-                }
-            }
-            exportDb = mergedData;
-        }
-  
-        // Format
+        // Read directly from DB — no prediction calculation
         const formatted = await formatMainExportData(
             'rice',
             targetFeatures,
-            exportDb,
-            results
+            userDb,
         );
         
         setIsExporting(false);
-        setStatus(`Export ready for ${targetFeatures.length} fields.`);
+        setStatus(`${targetFeatures.length}件の圃場の出力準備が完了しました。`);
         return formatted;
     };
   
@@ -141,13 +78,32 @@ export function useExport({
     const handleCsvExport = async () => {
         const targets = getTargetFeatures();
         if (targets.length === 0) {
-            alert("No saved fields found to export.");
+            alert("出力する保存済みデータが見つかりません。");
             return;
         }
         const data = await prepareExportData(targets);
-        if (!data) return;
+        if (!data || data.length === 0) return;
   
-        const headers = Object.keys(data[0]);
+        // Define fixed headers in the requested order
+        const headers = [
+            'ポリゴンUUID',
+            '圃場名',
+            '品種',
+            '移植期',
+            '測定日',
+            '幼穂長',
+            '出穂期',
+            '出穂期_状態',
+            '成熟期',
+            '成熟期_状態',
+            'MET26',
+            '緯度',
+            '経度',
+            '市町村コード',
+            '備考',
+            'エラー'
+        ];
+
         const csvContent = [
           headers.join(','),
           ...data.map(row => headers.map(fieldName => {
@@ -163,11 +119,11 @@ export function useExport({
     const handleGeoJsonExport = async () => {
         const targets = getTargetFeatures();
         if (targets.length === 0) {
-            alert("No saved fields found to export.");
+            alert("出力する保存済みデータが見つかりません。");
             return;
         }
-        const data = await prepareExportData(targets); // Formatted rows
-        if (!data) return;
+        const data = await prepareExportData(targets);
+        if (!data || data.length === 0) return;
   
         const geoJson = createGeoJsonFromFormattedData(data, targets);
         const blob = new Blob([JSON.stringify(geoJson, null, 2)], { type: 'application/json' });
@@ -177,12 +133,12 @@ export function useExport({
     const handleHtmlExport = async () => {
         const targets = getTargetFeatures();
         if (targets.length === 0) {
-            alert("No saved fields found to export.");
+            alert("出力する保存済みデータが見つかりません。");
             return;
         }
         
         const data = await prepareExportData(targets);
-        if (!data) return;
+        if (!data || data.length === 0) return;
   
         const geoJson = createGeoJsonFromFormattedData(data, targets);
         
@@ -204,7 +160,7 @@ export function useExport({
             const blob = new Blob([html], { type: 'text/html' });
             downloadFile(blob, getExportFileName('html'));
         } catch (e: any) {
-            alert("Failed to generate map: " + e.message);
+            alert("マップの生成に失敗しました: " + e.message);
         }
     };
 

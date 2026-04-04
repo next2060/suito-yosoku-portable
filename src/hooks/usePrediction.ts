@@ -98,7 +98,7 @@ export function usePrediction({
 
     const calculatePrediction = (): PredictionResult | null => {
         if (selectedFeatures.length !== 1) {
-            alert("Please select exactly one field for prediction.");
+            alert("予測を実行する圃場を1つだけ選択してください。");
             return null;
         }
         return runPredictionForFeature(selectedFeatures[0]);
@@ -193,20 +193,20 @@ export function usePrediction({
 
     const handleBatchRepredict = async () => {
         if (!selectedDbName) {
-            alert("Please select a target database first.");
+            alert("まずは対象の保存先（Database）を選択してください。");
             return;
         }
         if (!loadedWeatherData.length) {
-            alert("Please select and load Weather Data from the Main Map or Weather panel first.");
+            alert("まずは気象データを選択・読み込んでください。");
             return;
         }
 
-        setStatus('Running batch re-prediction on database...');
+        setStatus('データベース上で一括再予測を実行しています...');
         const mergedData = { ...userDb };
         let updateCount = 0;
 
         if (!fields || !fields.features) {
-            alert("Please load City GeoJSON first so fields can be mapped.");
+            alert("圃場データ（GeoJSON）を読み込んでください。");
             return;
         }
 
@@ -243,6 +243,10 @@ export function usePrediction({
                     updated = true;
                 }
 
+                if (res.met26 !== undefined && res.met26 !== null) {
+                    record.met26 = res.met26;
+                }
+
                 if (updated) {
                     record.updatedAt = new Date().toISOString();
                     updateCount++;
@@ -253,14 +257,14 @@ export function usePrediction({
         if (updateCount > 0) {
             try {
                 await saveUserDb(mergedData);
-                setStatus(`Successfully re-predicted maturity dates for ${updateCount} fields.`);
-                alert(`Update complete! ${updateCount} fields re-predicted.`);
+                setStatus(`再予測完了：${updateCount}件の圃場を更新しました。`);
+                alert(`更新完了！ ${updateCount}件の圃場を再予測しました。`);
             } catch (e: any) {
-                setStatus(`Failed to save re-predictions: ${e.message}`);
+                setStatus(`再予測の保存に失敗しました: ${e.message}`);
             }
         } else {
-            setStatus('No fields requiring re-prediction were found.');
-            alert('No fields requiring re-prediction were found.');
+            setStatus('再予測必要な圃場がありませんでした（すべて実績、またはデータなし）。');
+            alert('再予測が必要な圃場は見つかりませんでした。');
         }
     };
 

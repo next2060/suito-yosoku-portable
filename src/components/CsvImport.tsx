@@ -15,6 +15,7 @@ interface CsvImportProps {
     globalSelectedCity?: string;
     globalLoadCity?: (cityName: string) => Promise<void>;
     globalFields?: any;
+    runPredictionForFeature?: (feature: GeoFeature) => any;
 }
 
 export default function CsvImport({ 
@@ -25,7 +26,8 @@ export default function CsvImport({
     loadWeather,
     globalSelectedCity,
     globalLoadCity,
-    globalFields
+    globalFields,
+    runPredictionForFeature
 }: CsvImportProps) {
     const { 
         directoryHandle, 
@@ -75,11 +77,11 @@ export default function CsvImport({
         if (!file) return;
 
         if (!globalSelectedCity || !globalFields || !selectedDbName) {
-            alert("Please select a city and Target DB first.");
+            alert("まずは対象の市町村と保存先（DB）を選択してください。");
             return;
         }
 
-        setStatus('Parsing CSV...');
+        setStatus('CSVを解析中...');
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -107,19 +109,6 @@ export default function CsvImport({
                  const uuid = f.properties.polygon_uuid || f.properties.id;
                  featureMap.set(String(uuid), f);
             });
-        }
-
-        // DEBUG: Log GeoJSON feature keys and CSV row keys
-        const featureKeys = Array.from(featureMap.keys());
-        console.log(`[CSV Import Debug] GeoJSON features count: ${featureKeys.length}`);
-        console.log(`[CSV Import Debug] Sample GeoJSON UUIDs (first 5):`, featureKeys.slice(0, 5));
-        console.log(`[CSV Import Debug] CSV rows count: ${data.length}`);
-        if (data.length > 0) {
-            console.log(`[CSV Import Debug] CSV columns:`, Object.keys(data[0]));
-            console.log(`[CSV Import Debug] First CSV row:`, data[0]);
-            // Try all possible UUID column names
-            const csvUuid = data[0]['polygon_uuid'] || data[0]['id'] || data[0]['fid'];
-            console.log(`[CSV Import Debug] First CSV UUID (polygon_uuid|id|fid):`, csvUuid);
         }
 
         // 2. Iterate CSV - try multiple possible column names for UUID
@@ -180,38 +169,67 @@ export default function CsvImport({
             }
         });
 
-        console.log(`[CSV Import Debug] Matched ${matchCount} out of ${data.length} CSV rows`);
-
         setTempUserDb(newTempDb);
         setMatchedFields({
             type: "FeatureCollection",
             features: matchedFeatures
         });
 
-        setStatus(`Loaded CSV. Matched ${matchCount} / ${data.length} fields.`);
+        setStatus(`CSVを読み込みました。 ${data.length}行中 ${matchCount}件の圃場がマッチしました。`);
     };
 
     // --- Bulk Save ---
     const handleSaveToDb = async () => {
         if (!selectedDbName || !matchedFields) {
-            alert("Please select Target DB and matched fields to save.");
+            alert("保存先（DB）を選択し、保存対象の圃場がマッチしているか確認してください。");
             return;
         }
 
         try {
             const mergedData = { ...userDb, ...tempUserDb };
+
+            // Run predictions if weather is loaded
+            if (hasWeatherLoaded && runPredictionForFeature && matchedFields?.features) {
+                let predictCount = 0;
+                matchedFields.features.forEach((feature: GeoFeature) => {
+                    const uuid = feature.properties.polygon_uuid || feature.properties.id;
+                    const record = mergedData[uuid];
+                    if (!record) return;
+
+                    const res = runPredictionForFeature(feature);
+                    if (res && !res.error) {
+                        const hStatus = record.headingStatus || '予測';
+                        const mStatus = record.maturityStatus || '予測';
+
+                        if (res.heading_date && hStatus !== '実績') {
+                            record.headingDate = res.heading_date;
+                            record.headingStatus = '予測';
+                        }
+                        if (res.maturity_date && mStatus !== '実績') {
+                            record.maturityDate = res.maturity_date;
+                            record.maturityStatus = '予測';
+                        }
+                        if (res.met26 !== undefined && res.met26 !== null) {
+                            record.met26 = res.met26;
+                        }
+                        predictCount++;
+                    }
+                });
+                setStatus(`${Object.keys(tempUserDb).length}件の圃場を ${selectedDbName} に保存しました（${predictCount}件の予測を実行済み）。`);
+            } else {
+                setStatus(`${Object.keys(tempUserDb).length}件の圃場を ${selectedDbName} に保存しました（気象データ未選択のため予測はスキップされました）。`);
+            }
+
             await saveUserDb(mergedData);
-            setStatus(`Saved ${Object.keys(tempUserDb).length} fields to ${selectedDbName}. The map will continue to show these fields.`);
-            
         } catch (e: any) {
-            setStatus(`Error saving to DB: ${e.message}`);
+            setStatus(`DB保存エラー: ${e.message}`);
         }
     };
 
     if (!directoryHandle) {
          return (
              <div className="p-8 text-center">
-                 <p className="text-red-600 font-bold">Please select a data folder on the main page first.</p>
+                 <p className="text-red-600 font-bold">最初にメインページでデータフォルダを選択してください。</p>
              </div>
          );
     }
@@ -224,13 +242,13 @@ export default function CsvImport({
 
                      {/* 1. City Select */}
                      <div>
-                        <label className="block text-sm font-bold text-black mb-1">1. Select City</label>
+                        <label className="block text-sm font-bold text-black mb-1">1. 市町村を選択</label>
                         <select 
                             className="w-full p-2 border border-gray-400 rounded text-black font-medium"
                             value={globalSelectedCity || ''}
                             onChange={(e) => handleCityChange(e.target.value)}
                         >
-                            <option value="">-- Select City --</option>
+                            <option value="">-- 市町村を選択 --</option>
                             {cityList.map(c => (
                                 <option key={c} value={c}>{c}</option>
                             ))}
@@ -239,7 +257,26 @@ export default function CsvImport({
 
                     {/* 2. DB Select */}
                     <div>
-                        <label className="block text-sm font-bold text-black mb-1">2. Target DB</label>
+                        <label className="block text-sm font-bold text-black mb-1">2. 保存先 (Target DB)</label>
+                        {matchedFields && (
+                            <div className="flex justify-between items-center bg-gray-50 p-2 rounded border border-gray-200 mb-2">
+                                <div>
+                                    <p className="text-xs font-bold text-gray-500">インポート状況</p>
+                                    <p className="text-green-700 font-bold">{matchedFields.features.length} 件の圃場がマッチしました</p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setMatchedFields(null);
+                                        setTempUserDb({});
+                                        if (fileInputRef.current) fileInputRef.current.value = '';
+                                        setStatus('');
+                                    }}
+                                    className="text-xs text-red-600 hover:text-red-800 font-bold px-3 py-1 border border-red-200 rounded"
+                                >
+                                    クリア
+                                </button>
+                            </div>
+                        )}
                         <select 
                             className="w-full p-2 border border-gray-400 rounded text-black font-medium"
                             value={selectedDbName || ''}
@@ -257,7 +294,7 @@ export default function CsvImport({
                                 }
                             }}
                         >
-                            <option value="" disabled>-- Select DB --</option>
+                            <option value="" disabled>-- DBを選択 --</option>
                             {dbList.map(db => (
                                 <option key={db} value={db}>{db}</option>
                             ))}
@@ -266,7 +303,7 @@ export default function CsvImport({
 
                     {/* 3. CSV Upload */}
                     <div>
-                        <label className="block text-sm font-bold text-black mb-1">3. Upload CSV</label>
+                        <label className="block text-sm font-bold text-black mb-1">3. CSVアップロード</label>
                         <input 
                             type="file" 
                             accept=".csv"
@@ -276,7 +313,7 @@ export default function CsvImport({
                             disabled={!globalSelectedCity || !selectedDbName}
                         />
                         <p className="text-[10px] text-gray-600 mt-1">
-                            Supported cols: id, name, varietyId, transplantDate, headingDate, headingStatus, maturityDate, maturityStatus
+                            対応カラム: id, name, varietyId, transplantDate, headingDate, headingStatus, maturityDate, maturityStatus
                         </p>
                     </div>
 
@@ -286,7 +323,7 @@ export default function CsvImport({
                         disabled={!matchedFields || !selectedDbName}
                         className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded disabled:bg-gray-400"
                     >
-                        Save To DB
+                        DBに保存
                     </button>
 
                     {/* 5. Weather Select & Batch Re-prediction */}
@@ -294,7 +331,7 @@ export default function CsvImport({
                          <div className="mt-4 border-t border-gray-300 pt-4">
                              {/* Weather Selection */}
                              <div className="mb-4">
-                                 <label className="block text-sm font-bold text-black mb-1">Select Weather Data</label>
+                                 <label className="block text-sm font-bold text-black mb-1">気象データを選択</label>
                                  <select 
                                      className="w-full p-2 border border-gray-400 rounded text-black font-medium"
                                      value={selectedWeatherPoint}
@@ -302,7 +339,7 @@ export default function CsvImport({
                                          if (loadWeather) loadWeather(e.target.value);
                                      }}
                                  >
-                                     <option value="">-- Select Weather --</option>
+                                     <option value="">-- 気象データを選択 --</option>
                                      {weatherPoints.map(wp => (
                                          <option key={wp} value={wp}>{wp}</option>
                                      ))}

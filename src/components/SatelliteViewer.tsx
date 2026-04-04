@@ -27,7 +27,7 @@ export default function SatelliteViewer() {
     const [satelliteData, setSatelliteData] = useState<any | null>(null);
     const [tiffBuffer, setTiffBuffer] = useState<ArrayBuffer | null>(null);
 
-    const [status, setStatus] = useState<string>('Select an area and date.');
+    const [status, setStatus] = useState<string>('地域と日付を選択してください。');
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
     // Filter fields geojson by selected city
@@ -59,7 +59,7 @@ export default function SatelliteViewer() {
                         setCityGeoJson(null);
                         setSatelliteData(null);
                         setTiffBuffer(null);
-                        setStatus('No data available for this mode.');
+                        setStatus('このモードにはデータがありません。');
                     }
                 } catch (e) {
                     console.error("Failed to load cities", e);
@@ -110,10 +110,10 @@ export default function SatelliteViewer() {
                         setSelectedDate('');
                         setSatelliteData(null);
                         setTiffBuffer(null);
-                        setStatus('No data available for this mode/city/db.');
+                        setStatus('このモード/市町村/DBの組み合わせにはデータがありません。');
                     }
                 } catch (e: any) {
-                    setStatus(`Error scanning dates: ${e.message}`);
+                    setStatus(`日付読み込みエラー: ${e.message}`);
                 }
             } else {
                 setAvailableDates([]);
@@ -128,7 +128,7 @@ export default function SatelliteViewer() {
         const fetchData = async () => {
             if (selectedCity && selectedDate && effectiveMode) {
                 setIsLoading(true);
-                setStatus('Loading satellite data...');
+                setStatus('衛星データを読み込み中...');
                 // Clear state immediately to unmount components containing old data
                 setSatelliteData(null);
                 setTiffBuffer(null);
@@ -169,9 +169,9 @@ export default function SatelliteViewer() {
                         setTiffBuffer(null); // TIFF is optional
                     }
 
-                    setStatus(`Data loaded for ${selectedDate}`);
+                    setStatus(`${selectedDate} のデータを読み込みました`);
                 } catch (e: any) {
-                    setStatus(`Error loading data: ${e.message}`);
+                    setStatus(`データ読み込みエラー: ${e.message}`);
                     setSatelliteData(null);
                     setTiffBuffer(null);
                 } finally {
@@ -212,7 +212,7 @@ export default function SatelliteViewer() {
                 {/* Content */}
                 <div className="p-4 flex flex-col gap-4 overflow-y-auto">
                     <div className="bg-blue-50 text-blue-800 p-2 rounded text-xs">
-                        {isLoading ? 'Loading...' : status}
+                        {isLoading ? '読み込み中...' : status}
                     </div>
 
                     {/* Flooded Sub-Mode Toggle */}
@@ -243,7 +243,7 @@ export default function SatelliteViewer() {
 
                     {needsDb && (
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm font-bold text-gray-700">1. Target DB</label>
+                            <label className="text-sm font-bold text-gray-700">1. 保存先 (Target DB)</label>
                             <select
                                 className="w-full p-2 border border-gray-300 rounded text-sm text-black"
                                 value={selectedDb}
@@ -257,14 +257,14 @@ export default function SatelliteViewer() {
                     )}
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-bold text-gray-700">{needsDb ? '2.' : '1.'} Area (City)</label>
+                        <label className="text-sm font-bold text-gray-700">{needsDb ? '2.' : '1.'} エリア (市町村)</label>
                         <select
                             className="w-full p-2 border border-gray-300 rounded text-sm text-black"
                             value={selectedCity}
                             onChange={(e) => setSelectedCity(e.target.value)}
                             disabled={availableCities.length === 0}
                         >
-                            <option value="">-- Select City --</option>
+                            <option value="">-- 市町村を選択 --</option>
                             {availableCities.map(city => (
                                 <option key={city} value={city}>{city}</option>
                             ))}
@@ -272,14 +272,14 @@ export default function SatelliteViewer() {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-sm font-bold text-gray-700">{needsDb ? '3.' : '2.'} Date</label>
+                        <label className="text-sm font-bold text-gray-700">{needsDb ? '3.' : '2.'} 測定日 (Date)</label>
                         <select
                             className="w-full p-2 border border-gray-300 rounded text-sm text-black"
                             value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
                             disabled={!selectedCity || availableDates.length === 0}
                         >
-                            <option value="">-- Select Date --</option>
+                            <option value="">-- 日付を選択 --</option>
                             {availableDates.map(date => (
                                 <option key={date} value={date}>{date}</option>
                             ))}
@@ -288,7 +288,7 @@ export default function SatelliteViewer() {
 
                     {/* Legend / Info */}
                     <div className="mt-4 p-4 border border-gray-200 rounded bg-white shadow-sm">
-                        <h3 className="font-bold text-gray-800 text-sm mb-2">Legend</h3>
+                        <h3 className="font-bold text-gray-800 text-sm mb-2">凡例 (Legend)</h3>
                         {activeTab === 'NDVI' ? (
                             <div className="text-xs text-gray-600 flex flex-col gap-2 mt-2">
                                 <div className="flex w-full rounded border border-gray-300 overflow-hidden h-4">
@@ -350,7 +350,7 @@ export default function SatelliteViewer() {
                             </div>
                         ) : (
                             <div className="text-xs text-gray-600">
-                                TrueColor RGB Image. Overlays directly on map. No polygons styled.
+                                TrueColor画像機能では、マップ上に画像を直接オーバーレイ表示します（ポリゴンの着色は行いません）。
                             </div>
                         )}
                     </div>
