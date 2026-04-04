@@ -314,7 +314,7 @@ export default function CsvImport({
                                  disabled={!hasWeatherLoaded}
                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded disabled:bg-gray-400 transition"
                              >
-                                 Re-Predict Maturity<br/><span className="text-[10px] opacity-80">(Requires Weather Data)</span>
+                                 Re-Prediction (All)<br/><span className="text-[10px] opacity-80">Requires Weather Data</span>
                              </button>
                              {!hasWeatherLoaded && (
                                  <p className="text-[10px] text-red-500 mt-1 font-bold">

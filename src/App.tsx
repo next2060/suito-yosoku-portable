@@ -70,7 +70,7 @@ export default function Home() {
   } = usePrediction({
       userDb, saveUserDb, selectedDbName, fields, selectedFeatures,
       varieties, loadedWeatherData, setStatus,
-      formVarietyId, formTransplantDate, formHeadingDate,
+      formVarietyId, formTransplantDate, formHeadingDate, formHeadingStatus,
       formMeasurementDate, formPanicleLength
   });
 
@@ -348,6 +348,8 @@ export default function Home() {
                             weatherPoints={weatherPoints}
                             selectedWeatherPoint={selectedWeatherPoint}
                             loadWeather={loadWeather}
+                            onBatchRepredict={handleBatchRepredict}
+                            hasWeatherLoaded={loadedWeatherData.length > 0}
                         />
                     )}
 

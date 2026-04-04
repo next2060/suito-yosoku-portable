@@ -16,6 +16,7 @@ interface UsePredictionProps {
     formVarietyId: string;
     formTransplantDate: string;
     formHeadingDate: string;
+    formHeadingStatus?: string;
     formMeasurementDate?: string;
     formPanicleLength?: string;
 }
@@ -63,6 +64,7 @@ export function usePrediction({
     formVarietyId,
     formTransplantDate,
     formHeadingDate,
+    formHeadingStatus,
     formMeasurementDate,
     formPanicleLength
 }: UsePredictionProps) {
@@ -112,6 +114,7 @@ export function usePrediction({
         let varietyId = '';
         let transplantDate = '';
         let headingDate = '';
+        let headingStatus = '';
         let measurementDate = '';
         let panicleLength: number | undefined = undefined;
 
@@ -121,6 +124,7 @@ export function usePrediction({
             varietyId = formVarietyId;
             transplantDate = formTransplantDate;
             headingDate = formHeadingDate;
+            headingStatus = formHeadingStatus || '予測';
             measurementDate = formMeasurementDate || '';
             if (formPanicleLength) {
                 const p = parseFloat(formPanicleLength);
@@ -133,11 +137,14 @@ export function usePrediction({
             if (!varietyId) varietyId = userDb[uuid].varietyId;
             if (!transplantDate) transplantDate = userDb[uuid].transplantDate;
             if (!headingDate) headingDate = userDb[uuid].headingDate;
+            if (!headingStatus) headingStatus = userDb[uuid].headingStatus || '予測';
             if (!measurementDate) measurementDate = userDb[uuid].measurementDate || '';
             if (panicleLength === undefined) panicleLength = userDb[uuid].panicleLength;
         }
 
-        if (!varietyId || (!transplantDate && !measurementDate)) {
+        if (!headingStatus) headingStatus = '予測';
+
+        if (!varietyId || (!transplantDate && !measurementDate && !headingDate)) {
             return { error: 'Missing variety or start date' } as any;
         }
 
@@ -148,10 +155,19 @@ export function usePrediction({
         const normHeading = normalizeDate(headingDate);
         const normMeasurement = normalizeDate(measurementDate);
 
-        if (!normTransplant && !normMeasurement) return { error: 'Invalid start date' } as any;
+        if (!normTransplant && !normMeasurement && !normHeading) return { error: 'Invalid start date' } as any;
 
-        // Preference: Measurement (Panicle) -> Heading -> Transplant
-        if (normMeasurement && panicleLength !== undefined) {
+        // Preference: Heading (Actual) -> Measurement (Panicle) -> Transplant
+        if (headingStatus === '実績' && normHeading) {
+            return runPrediction(
+                36.365,
+                140.471,
+                variety,
+                loadedWeatherData,
+                normHeading,
+                'heading'
+            );
+        } else if (normMeasurement && panicleLength !== undefined) {
              return runPrediction(
                  36.365,
                  140.471,
@@ -161,16 +177,7 @@ export function usePrediction({
                  'panicle',
                  panicleLength
              );
-        } else if (normHeading) {
-            return runPrediction(
-                36.365,
-                140.471,
-                variety,
-                loadedWeatherData,
-                normHeading,
-                'heading'
-            );
-        } else {
+        } else if (normTransplant) {
             return runPrediction(
                 36.365,
                 140.471,
@@ -179,6 +186,8 @@ export function usePrediction({
                 normTransplant!,
                 'transplant'
             );
+        } else {
+             return { error: 'Insufficient data for prediction' } as any;
         }
     };
 
@@ -209,19 +218,35 @@ export function usePrediction({
 
         for (const uuid of Object.keys(mergedData)) {
             const record = mergedData[uuid];
-            const headingStatus = record.headingStatus || '実績';
+            
+            if (record.maturityStatus === '実績') continue;
 
-            if (record.headingDate && headingStatus !== '予測' && record.maturityStatus !== '実績') {
-                 const feature = featureMap.get(String(uuid));
-                 if (feature) {
-                     const res = runPredictionForFeature(feature);
-                     if (res && !res.error && res.maturity_date) {
-                         record.maturityDate = res.maturity_date;
-                         record.maturityStatus = '予測';
-                         record.updatedAt = new Date().toISOString();
-                         updateCount++;
-                     }
-                 }
+            const headingStatus = record.headingStatus || '予測';
+            
+            const feature = featureMap.get(String(uuid));
+            if (!feature) continue;
+
+            const res = runPredictionForFeature(feature);
+            
+            if (res && !res.error) {
+                let updated = false;
+
+                if (res.heading_date && headingStatus !== '実績') {
+                    record.headingDate = res.heading_date;
+                    record.headingStatus = '予測';
+                    updated = true;
+                }
+
+                if (res.maturity_date) {
+                    record.maturityDate = res.maturity_date;
+                    record.maturityStatus = '予測';
+                    updated = true;
+                }
+
+                if (updated) {
+                    record.updatedAt = new Date().toISOString();
+                    updateCount++;
+                }
             }
         }
 

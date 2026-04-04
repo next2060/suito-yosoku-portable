@@ -18,6 +18,9 @@ interface SetupPanelProps {
     weatherPoints: string[];
     selectedWeatherPoint: string;
     loadWeather: (name: string) => Promise<void>;
+
+    onBatchRepredict?: () => void;
+    hasWeatherLoaded?: boolean;
 }
 
 export default function SetupPanel({
@@ -34,7 +37,9 @@ export default function SetupPanel({
     loadCity,
     weatherPoints,
     selectedWeatherPoint,
-    loadWeather
+    loadWeather,
+    onBatchRepredict,
+    hasWeatherLoaded
 }: SetupPanelProps) {
     return (
         <div className="space-y-4">
@@ -98,7 +103,7 @@ export default function SetupPanel({
             <div>
                 <label className="block text-sm font-bold text-gray-800 mb-1">Weather Point</label>
                 <select 
-                    className="w-full p-2 border border-gray-400 rounded text-black font-medium"
+                    className="w-full p-2 border border-gray-400 rounded text-black font-medium mb-4"
                     value={selectedWeatherPoint}
                     onChange={(e) => loadWeather(e.target.value)}
                 >
@@ -107,6 +112,23 @@ export default function SetupPanel({
                         <option key={p} value={p}>{p}</option>
                     ))}
                 </select>
+
+                {onBatchRepredict && (
+                    <div className="border-t border-gray-300 pt-4 mt-2">
+                         <button
+                             onClick={onBatchRepredict}
+                             disabled={!hasWeatherLoaded}
+                             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded disabled:bg-gray-400 transition"
+                         >
+                             Re-Prediction (All)<br/><span className="text-[10px] opacity-80">Requires Weather Data</span>
+                         </button>
+                         {!hasWeatherLoaded && (
+                             <p className="text-[10px] text-red-500 mt-1 font-bold">
+                                 Please load weather data above first.
+                             </p>
+                         )}
+                    </div>
+                )}
             </div>
         </div>
     );
