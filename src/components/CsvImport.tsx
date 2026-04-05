@@ -351,11 +351,11 @@ export default function CsvImport({
                                  disabled={!hasWeatherLoaded}
                                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded disabled:bg-gray-400 transition"
                              >
-                                 Re-Prediction (All)<br/><span className="text-[10px] opacity-80">Requires Weather Data</span>
+                                 一括再予測<br/><span className="text-[10px] opacity-80">気象データが必要です</span>
                              </button>
                              {!hasWeatherLoaded && (
                                  <p className="text-[10px] text-red-500 mt-1 font-bold">
-                                     Please select weather data above.
+                                     気象データを選択してください。
                                  </p>
                              )}
                          </div>

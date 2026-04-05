@@ -311,7 +311,7 @@ export default function FieldSettingsPanel({
                         disabled={selectedFeatures.length > 1 || !selectedDbName}
                         className={`w-full text-white font-bold py-2 rounded transition ${selectedFeatures.length > 1 || !selectedDbName ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        プレビュー (RUN)
+                        予測のみ実行
                     </button>
                     <div className="flex gap-2">
                         <button 
@@ -393,7 +393,7 @@ export default function FieldSettingsPanel({
                             disabled={!selectedDbName}
                             className={`flex-1 font-bold py-2 rounded transition ${!selectedDbName ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700 text-white'}`}
                         >
-                            保存 (SAVE)
+                            保存
                         </button>
                         <button 
                             onClick={async () => {
@@ -441,7 +441,7 @@ export default function FieldSettingsPanel({
                             disabled={!selectedDbName}
                             className={`flex-1 font-bold py-2 rounded transition ${!selectedDbName ? 'bg-gray-400 text-gray-200 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 text-white'}`}
                         >
-                            削除 (DELETE)
+                            削除
                         </button>
                     </div>
                 </div>

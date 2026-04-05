@@ -121,7 +121,7 @@ export default function SetupPanel({
                              disabled={!hasWeatherLoaded}
                              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded disabled:bg-gray-400 transition"
                          >
-                             一括再予測 (Re-Prediction)<br/><span className="text-[10px] opacity-80">※気象データの読み込みが必要です</span>
+                             一括再予測<br/><span className="text-[10px] opacity-80">※気象データの読み込みが必要です</span>
                          </button>
                          {!hasWeatherLoaded && (
                              <p className="text-[10px] text-red-500 mt-1 font-bold">

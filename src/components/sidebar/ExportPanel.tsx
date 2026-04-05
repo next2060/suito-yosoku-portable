@@ -18,7 +18,7 @@ export default function ExportPanel({
             <div className="bg-white p-4 rounded shadow border border-gray-200">
                 <h3 className="font-bold text-lg text-green-800 mb-2">データ出力</h3>
                 <p className="text-xs text-gray-600 mb-4">
-                    現在のデータベースに保存されている予測結果含む全てのデータを出力します。
+                    選択した圃場の情報を出力します。
                 </p>
                 <div className="flex flex-col gap-3">
                     <button 
@@ -44,9 +44,6 @@ export default function ExportPanel({
                     >
                          {isExporting ? '出力中...' : 'HTML マップ出力'}
                     </button>
-                    <p className="text-[10px] text-gray-500 mt-1">
-                        HTMLマップには、予測された成熟期に基づく色付きのインタラクティブなポリゴンが含まれます。
-                    </p>
                 </div>
             </div>
         </div>
